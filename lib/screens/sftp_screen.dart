@@ -177,9 +177,9 @@ class _SftpScreenState extends State<SftpScreen> {
 
       // Save to Downloads folder
       final downloadsDir = await getDownloadsDirectory();
-      final saveDir = downloadsDir?.path;
-      if (saveDir == null) {
-        throw Exception('Downloads directory not available');
+      final saveDir = downloadsDir?.path ?? (await getApplicationDocumentsDirectory()).path;
+      if (saveDir.isEmpty) {
+        throw Exception('Save directory not available');
       }
 
       final localFile = File('$saveDir/${item.filename}');
@@ -194,11 +194,14 @@ class _SftpScreenState extends State<SftpScreen> {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloaded to Downloads/${item.filename}'),
+            content: Text('Downloaded to $saveDir/${item.filename}'),
             backgroundColor: AppTheme.accentGreen,
             behavior: SnackBarBehavior.floating,
           ),
         );
+        try {
+          await OpenFilex.open('$saveDir/${item.filename}');
+        } catch (_) {}
       }
     } catch (e) {
       if (mounted) {
@@ -327,7 +330,9 @@ class _SftpScreenState extends State<SftpScreen> {
     setState(() => _loading = true);
     try {
       String remotePath;
-      if (_currentPath == '.' || _currentPath.endsWith('/')) {
+      if (_currentPath == '.') {
+        remotePath = item.filename;
+      } else if (_currentPath.endsWith('/')) {
         remotePath = '$_currentPath${item.filename}';
       } else {
         remotePath = '$_currentPath/${item.filename}';
@@ -338,7 +343,7 @@ class _SftpScreenState extends State<SftpScreen> {
       await for (var chunk in remoteFile.read()) {
         bytes.addAll(chunk);
       }
-      final content = utf8.decode(bytes);
+      final content = utf8.decode(bytes, allowMalformed: true);
       
       if (mounted) {
         setState(() => _loading = false);
@@ -370,7 +375,9 @@ class _SftpScreenState extends State<SftpScreen> {
     setState(() => _loading = true);
     try {
       String remotePath;
-      if (_currentPath == '.' || _currentPath.endsWith('/')) {
+      if (_currentPath == '.') {
+        remotePath = item.filename;
+      } else if (_currentPath.endsWith('/')) {
         remotePath = '$_currentPath${item.filename}';
       } else {
         remotePath = '$_currentPath/${item.filename}';
