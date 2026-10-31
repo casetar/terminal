@@ -555,9 +555,8 @@ class _TerminalScreenState extends State<TerminalScreen> {
       resizeToAvoidBottomInset: false,
       body: Column(
         children: [
-          // Terminal scroll area — top 70% of screen, separate from input
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.7,
+          // Terminal scroll area — fills remaining space above input bar
+          Expanded(
             child: MediaQuery(
               data: MediaQuery.of(context).copyWith(
                 viewInsets: EdgeInsets.zero,

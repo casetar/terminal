@@ -15,7 +15,7 @@ void main() {
 
   testWidgets('Terminal app smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const VpnGateApp());
+    await tester.pumpWidget(const TerminalApp());
 
     // Verify that the app builds without crashing.
     expect(find.byType(MaterialApp), findsOneWidget);
