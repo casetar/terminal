@@ -27,11 +27,11 @@ void main() async {
     await initBackgroundExecution();
   }
 
-  runApp(const VpnGateApp());
+  runApp(const TerminalApp());
 }
 
-class VpnGateApp extends StatelessWidget {
-  const VpnGateApp({super.key});
+class TerminalApp extends StatelessWidget {
+  const TerminalApp({super.key});
 
   @override
   Widget build(BuildContext context) {
