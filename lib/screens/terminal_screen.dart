@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
@@ -40,6 +41,9 @@ class _TerminalScreenState extends State<TerminalScreen> {
   bool _isListening = false;
   String _voiceBuffer = '';
 
+  // Arrow keys overlay (shown after Escape)
+  bool _showArrows = false;
+
   @override
   void initState() {
     super.initState();
@@ -50,9 +54,18 @@ class _TerminalScreenState extends State<TerminalScreen> {
   Future<void> _initSpeech() async {
     _speech = stt.SpeechToText();
 
-    final micGranted = await Permission.microphone.request().isGranted;
+    // On macOS, permission_handler doesn't integrate with the sandbox —
+    // speech_to_text handles the system permission dialog itself.
+    // On Android/iOS we still use permission_handler.
+    final bool micGranted;
+    if (!Platform.isMacOS) {
+      micGranted = await Permission.microphone.request().isGranted;
+    } else {
+      micGranted = true; // macOS: let speech_to_text trigger the system prompt
+    }
+
     if (!micGranted) {
-      debugPrint("Microphone permission denied");
+      debugPrint('Microphone permission denied');
       _speechAvailable = false;
       if (mounted) setState(() {});
       return;
@@ -60,11 +73,11 @@ class _TerminalScreenState extends State<TerminalScreen> {
 
     _speechAvailable = await _speech.initialize(
       onError: (error) {
-        debugPrint("Speech error: ${error.errorMsg}");
+        debugPrint('Speech error: ${error.errorMsg}');
         if (mounted) setState(() => _isListening = false);
       },
       onStatus: (status) {
-        debugPrint("Speech status: $status");
+        debugPrint('Speech status: $status');
       },
     );
 
@@ -116,7 +129,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
 
       terminal
           .write('\r\n\x1b[36m┌─────────────────────────────────┐\x1b[0m\r\n');
-      terminal.write('\x1b[36m│  VPNGate Terminal  v1.0          │\x1b[0m\r\n');
+      terminal.write('\x1b[36m│  Terminal                            │\x1b[0m\r\n');
       terminal
           .write('\x1b[36m└─────────────────────────────────┘\x1b[0m\r\n\r\n');
       terminal.write(
@@ -280,6 +293,19 @@ class _TerminalScreenState extends State<TerminalScreen> {
     if (_session != null && text.isNotEmpty) {
       _session!.write(utf8.encode(text));
     }
+  }
+
+  void _toggleArrows() {
+    setState(() => _showArrows = !_showArrows);
+    if (!_showArrows) {
+      _sendInput('\x1b'); // Escape key when hiding arrows
+    }
+  }
+
+  void _sendArrow(String sequence) {
+    _sendInput(sequence);
+    setState(() => _showArrows = false);
+    _sendInput('\x1b');
   }
 
   Future<void> _copySelection() async {
@@ -458,7 +484,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
                             _statusMsg ==
                                 LocalizationService.translate('connecting')
                         ? _statusMsg
-                        : '$_statusMsg ${LocalizationService.language.value == 'ru' ? '(двойной тап для переподключения)' : '(double-tap to reconnect)'}',
+                        : '$_statusMsg (двойной тап)',
                     style: TextStyle(
                       fontSize: 11,
                       color: _connected ? AppTheme.accentGreen : AppTheme.danger,
@@ -528,14 +554,10 @@ class _TerminalScreenState extends State<TerminalScreen> {
         ),
       ),
       resizeToAvoidBottomInset: false,
-      body: Stack(
+      body: Column(
         children: [
-          // Terminal view
-          Positioned(
-            left: 0,
-            right: 0,
-            top: -MediaQuery.of(context).viewInsets.bottom,
-            bottom: 60 + MediaQuery.of(context).viewInsets.bottom,
+          // Terminal scroll area — separate from input
+          Expanded(
             child: MediaQuery(
               data: MediaQuery.of(context).copyWith(
                 viewInsets: EdgeInsets.zero,
@@ -581,16 +603,42 @@ class _TerminalScreenState extends State<TerminalScreen> {
 
 
           // Input bar with voice
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            child: Container(
-              color: AppTheme.surface,
+          Container(
+            color: AppTheme.surface,
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             child: SafeArea(
               top: false,
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Arrow keys overlay (shown after Escape)
+                  if (_showArrows)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _ArrowBtn(
+                          icon: Icons.arrow_upward,
+                          onTap: () => _sendArrow('\x1b[A'),
+                        ),
+                        const SizedBox(width: 8),
+                        _ArrowBtn(
+                          icon: Icons.arrow_downward,
+                          onTap: () => _sendArrow('\x1b[B'),
+                        ),
+                        const SizedBox(width: 8),
+                        _ArrowBtn(
+                          icon: Icons.arrow_left,
+                          onTap: () => _sendArrow('\x1b[D'),
+                        ),
+                        const SizedBox(width: 8),
+                        _ArrowBtn(
+                          icon: Icons.arrow_right,
+                          onTap: () => _sendArrow('\x1b[C'),
+                        ),
+                      ],
+                    ),
+                  if (_showArrows) const SizedBox(height: 6),
+                  Row(
                 children: [
                   // Copy
                   _IconBtn(
@@ -624,6 +672,14 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     onTap: () => _sendInput('\t'),
                   ),
                   const SizedBox(width: 8),
+                  // Escape / Arrows toggle
+                  _IconBtn(
+                    icon: _showArrows ? Icons.close : Icons.keyboard,
+                    color: AppTheme.textSecondary,
+                    tooltip: _showArrows ? 'Hide arrows' : 'Escape',
+                    onTap: _toggleArrows,
+                  ),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: TextField(
                       controller: _inputController,
@@ -655,16 +711,17 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  // Voice button
-                  if (_speechAvailable)
-                    _IconBtn(
-                      icon: _isListening ? Icons.mic : Icons.mic_none,
-                      color: _isListening
-                          ? AppTheme.accent
-                          : AppTheme.textSecondary,
-                      tooltip: 'Voice',
-                      onTap: _toggleVoice,
-                    ),
+                  // Voice button — always visible; system dialog fires on first tap
+                  _IconBtn(
+                    icon: _isListening ? Icons.mic : Icons.mic_none,
+                    color: _isListening
+                        ? AppTheme.accent
+                        : (_speechAvailable
+                            ? AppTheme.textSecondary
+                            : AppTheme.textSecondary.withValues(alpha: 0.4)),
+                    tooltip: 'Voice',
+                    onTap: _toggleVoice,
+                  ),
                   const SizedBox(width: 6),
                   // Send button
                   _IconBtn(
@@ -683,12 +740,13 @@ class _TerminalScreenState extends State<TerminalScreen> {
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-          ), // Positioned
-        ],
+        ),
       ),
-    );
+    ],
+  ),
+);
   }
 }
 
@@ -720,6 +778,32 @@ class _IconBtn extends StatelessWidget {
             border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Icon(icon, color: color, size: 18),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArrowBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _ArrowBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: '',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppTheme.accent.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+          ),
+          child: Icon(icon, color: AppTheme.accent, size: 20),
         ),
       ),
     );

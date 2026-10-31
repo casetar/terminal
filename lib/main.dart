@@ -11,8 +11,16 @@ import 'background_init_stub.dart'
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await LocalizationService.init();
-  await KeyStorageService.seedDefaultKey();
+
+  // Wrap in try/catch with timeout — on macOS unsigned builds, Keychain
+  // access may block or throw; we skip gracefully to avoid black screen.
+  try {
+    await LocalizationService.init().timeout(const Duration(seconds: 3));
+  } catch (_) {}
+
+  try {
+    await KeyStorageService.seedDefaultKey().timeout(const Duration(seconds: 3));
+  } catch (_) {}
 
   // Enable background execution on Android only
   if (Platform.isAndroid) {

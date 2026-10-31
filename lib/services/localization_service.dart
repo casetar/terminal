@@ -1,15 +1,23 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'simple_storage_service.dart';
 
 class LocalizationService {
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
+  // Use file storage on macOS/desktop to avoid unsigned Keychain issues
+  static bool get _useSimple =>
+      !kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows);
+
   static final ValueNotifier<String> language = ValueNotifier<String>('ru');
 
   static Future<void> init() async {
-    final saved = await _storage.read(key: 'app_language');
+    final saved = _useSimple
+        ? await SimpleStorageService.read('app_language')
+        : await _storage.read(key: 'app_language');
     if (saved != null) {
       language.value = saved;
     }
@@ -18,7 +26,11 @@ class LocalizationService {
   static Future<void> toggleLanguage() async {
     final next = language.value == 'ru' ? 'en' : 'ru';
     language.value = next;
-    await _storage.write(key: 'app_language', value: next);
+    if (_useSimple) {
+      await SimpleStorageService.write('app_language', next);
+    } else {
+      await _storage.write(key: 'app_language', value: next);
+    }
   }
 
   static String translate(String key) {
@@ -28,7 +40,7 @@ class LocalizationService {
 
   static const _translations = {
     'ru': {
-      'app_title': 'Savun',
+      'app_title': 'Terminal',
       'keys_title': 'SSH Ключи',
       'add_host': 'Добавить хост',
       'edit_host': 'Редактировать',
@@ -76,7 +88,7 @@ class LocalizationService {
       'paste': 'Вставить',
     },
     'en': {
-      'app_title': 'Savun',
+      'app_title': 'Terminal',
       'keys_title': 'SSH Keys',
       'add_host': 'Add Host',
       'edit_host': 'Edit',

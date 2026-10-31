@@ -113,26 +113,35 @@ class _SftpScreenState extends State<SftpScreen> {
 
   Future<void> _uploadFile() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles();
-      if (result != null && result.files.single.path != null) {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+      );
+      if (result != null && result.files.isNotEmpty) {
         setState(() => _loading = true);
-        File localFile = File(result.files.single.path!);
-        String filename = result.files.single.name;
-        
-        String remotePath;
-        if (_currentPath == '.' || _currentPath.endsWith('/')) {
-          remotePath = '$_currentPath$filename';
-        } else {
-          remotePath = '$_currentPath/$filename';
+        for (final file in result.files) {
+          if (file.path == null) continue;
+          final localFile = File(file.path!);
+          final filename = file.name;
+
+          String remotePath;
+          if (_currentPath == '.' || _currentPath.endsWith('/')) {
+            remotePath = '$_currentPath$filename';
+          } else {
+            remotePath = '$_currentPath/$filename';
+          }
+
+          final remoteFile = await _sftp!.open(
+            remotePath,
+            mode: SftpFileOpenMode.create | SftpFileOpenMode.write,
+          );
+          await remoteFile.write(localFile.openRead().cast());
+          await remoteFile.close();
         }
-        
-        final remoteFile = await _sftp!.open(remotePath, mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
-        await remoteFile.write(localFile.openRead().cast());
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Uploaded $filename'),
+              content: Text('Uploaded ${result.files.length} file(s)'),
               backgroundColor: AppTheme.accentGreen,
               behavior: SnackBarBehavior.floating,
             ),
@@ -187,6 +196,74 @@ class _SftpScreenState extends State<SftpScreen> {
       if (mounted) {
         setState(() {
           _error = 'Download error: ${e.toString()}';
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _zipAndDownloadFolder(SftpName item) async {
+    try {
+      setState(() => _loading = true);
+      final folderName = item.filename;
+      String remotePath;
+      if (_currentPath == '.' || _currentPath.endsWith('/')) {
+        remotePath = '$_currentPath$folderName';
+      } else {
+        remotePath = '$_currentPath/$folderName';
+      }
+      final zipRemotePath = '/tmp/${folderName.replaceAll('/', '_')}.zip';
+
+      // Create zip on server via SSH
+      final result = await _client!.runWithResult(
+        'zip -r "$zipRemotePath" "$remotePath"',
+        stdout: false,
+        stderr: true,
+      );
+      if (result.exitCode != 0) {
+        throw Exception('zip failed: ${utf8.decode(result.stderr)}');
+      }
+
+      // Download the zip via SFTP
+      final String? selectedDirectory =
+          await FilePicker.platform.getDirectoryPath();
+      if (selectedDirectory == null) {
+        // Clean up temp zip on server
+        try {
+          await _sftp!.remove(zipRemotePath);
+        } catch (_) {}
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+
+      final localFile = File('$selectedDirectory/${folderName}.zip');
+      final remoteFile = await _sftp!.open(zipRemotePath, mode: SftpFileOpenMode.read);
+      final sink = localFile.openWrite();
+      await for (var chunk in remoteFile.read()) {
+        sink.add(chunk);
+      }
+      await sink.close();
+      await remoteFile.close();
+
+      // Clean up temp zip on server
+      try {
+        await _sftp!.remove(zipRemotePath);
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Zipped and downloaded ${folderName}.zip'),
+            backgroundColor: AppTheme.accentGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Zip/download error: ${e.toString()}';
           _loading = false;
         });
       }
@@ -375,12 +452,22 @@ class _SftpScreenState extends State<SftpScreen> {
                                 style: const TextStyle(color: AppTheme.textSecondary),
                               )
                             : null,
-                        trailing: !isDir 
+                        trailing: isDir
                             ? IconButton(
-                                icon: const Icon(Icons.download, color: AppTheme.accent),
-                                onPressed: () => _downloadFile(item),
+                                icon: const Icon(
+                                  Icons.archive,
+                                  color: AppTheme.accentPurple,
+                                ),
+                                tooltip: 'Zip & Download',
+                                onPressed: () => _zipAndDownloadFolder(item),
                               )
-                            : null,
+                            : IconButton(
+                                icon: const Icon(
+                                  Icons.download,
+                                  color: AppTheme.accent,
+                                ),
+                                onPressed: () => _downloadFile(item),
+                              ),
                         onTap: () => _onItemTap(item),
                       );
                     },

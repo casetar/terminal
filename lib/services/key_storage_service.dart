@@ -1,10 +1,29 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:math';
+import 'simple_storage_service.dart';
 
 class KeyStorageService {
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
+
+  static bool get _useSimple =>
+      !kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows);
+
+  static Future<String?> _read(String key) => _useSimple
+      ? SimpleStorageService.read(key)
+      : _storage.read(key: key);
+
+  static Future<void> _write(String key, String value) => _useSimple
+      ? SimpleStorageService.write(key, value)
+      : _storage.write(key: key, value: value);
+
+  static Future<void> _delete(String key) => _useSimple
+      ? SimpleStorageService.delete(key)
+      : _storage.delete(key: key);
+
 
   static String _generateId() {
     final rng = Random.secure();
@@ -18,69 +37,69 @@ class KeyStorageService {
     String? passphrase,
   }) async {
     final id = _generateId();
-    await _storage.write(key: 'key_${id}_label', value: label);
-    await _storage.write(key: 'key_${id}_pem', value: privateKey);
+    await _write('key_${id}_label', label);
+    await _write('key_${id}_pem', privateKey);
     if (passphrase != null && passphrase.isNotEmpty) {
-      await _storage.write(key: 'key_${id}_pass', value: passphrase);
+      await _write('key_${id}_pass', passphrase);
     }
     // Track key IDs
-    final existing = await _storage.read(key: 'key_ids') ?? '';
+    final existing = await _read('key_ids') ?? '';
     final ids = existing.isEmpty ? <String>[] : existing.split(',');
     ids.add(id);
-    await _storage.write(key: 'key_ids', value: ids.join(','));
+    await _write('key_ids', ids.join(','));
     return id;
   }
 
   /// Save password for a host
   static Future<void> savePassword(String hostId, String password) async {
-    await _storage.write(key: 'pwd_$hostId', value: password);
+    await _write('pwd_$hostId', password);
   }
 
   static Future<String?> getPassword(String hostId) async {
-    return _storage.read(key: 'pwd_$hostId');
+    return _read('pwd_$hostId');
   }
 
   static Future<String?> getKeyPem(String keyId) async {
-    return _storage.read(key: 'key_${keyId}_pem');
+    return _read('key_${keyId}_pem');
   }
 
   static Future<String?> getKeyPassphrase(String keyId) async {
-    return _storage.read(key: 'key_${keyId}_pass');
+    return _read('key_${keyId}_pass');
   }
 
   static Future<String?> getKeyLabel(String keyId) async {
-    return _storage.read(key: 'key_${keyId}_label');
+    return _read('key_${keyId}_label');
   }
 
   static Future<List<Map<String, String>>> getAllKeys() async {
-    final idsStr = await _storage.read(key: 'key_ids') ?? '';
+    final idsStr = await _read('key_ids') ?? '';
     if (idsStr.isEmpty) return [];
     final ids = idsStr.split(',');
     final result = <Map<String, String>>[];
     for (final id in ids) {
-      final label = await _storage.read(key: 'key_${id}_label') ?? id;
+      final label = await _read('key_${id}_label') ?? id;
       result.add({'id': id, 'label': label});
     }
     return result;
   }
 
   static Future<void> deleteKey(String keyId) async {
-    await _storage.delete(key: 'key_${keyId}_label');
-    await _storage.delete(key: 'key_${keyId}_pem');
-    await _storage.delete(key: 'key_${keyId}_pass');
-    final idsStr = await _storage.read(key: 'key_ids') ?? '';
+    await _delete('key_${keyId}_label');
+    await _delete('key_${keyId}_pem');
+    await _delete('key_${keyId}_pass');
+    final idsStr = await _read('key_ids') ?? '';
     final ids = idsStr.split(',')..remove(keyId);
-    await _storage.write(key: 'key_ids', value: ids.join(','));
+    await _write('key_ids', ids.join(','));
   }
 
   static Future<void> seedDefaultKey() async {
     const defaultId = 'default_rsa_savun';
-    final existingIdsStr = await _storage.read(key: 'key_ids') ?? '';
+    final existingIdsStr = await _read('key_ids') ?? '';
     final existingIds = existingIdsStr.isEmpty ? <String>[] : existingIdsStr.split(',');
 
     if (!existingIds.contains(defaultId)) {
-      await _storage.write(key: 'key_${defaultId}_label', value: 'rsa_savun');
-      await _storage.write(key: 'key_${defaultId}_pem', value: '''-----BEGIN RSA PRIVATE KEY-----
+      await _write('key_${defaultId}_label', 'rsa_savun');
+      await _write('key_${defaultId}_pem', '''-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA4fF+tVvR6JvzUYIgn3j7Ppu2Fdhp+4SKa+JcGmsuPwsjMgjA
 bMPRaK7sau4/DWzwI6onjlFI32oLL+xQ5bis3m8belmuWX4X/OphIww+RH+TAxXz
 3pUPpOwZR177K0qNh8+Tb5F32W8gHyaENb0sD/JSUgrHZDy+4dsKWVbmcP1/IcNj
@@ -108,7 +127,7 @@ S2dgVo2HZJ6AQzZZcBKHqc9ilbIPYfrU+vtN4pPPzM0diGCza8pO9U7y9ERFYarC
 IHA4WCVsozUbpP+sLX74dQ8wrVHrEWcoatATUmrsVjBl7g623Ufp
 -----END RSA PRIVATE KEY-----''');
       existingIds.add(defaultId);
-      await _storage.write(key: 'key_ids', value: existingIds.join(','));
+      await _write('key_ids', existingIds.join(','));
     }
   }
 }

@@ -1,5 +1,5 @@
-name: vpngate_terminal
-description: Android SSH Terminal with Voice Input and Secure Key Storage
+name: terminal
+description: SSH Terminal with Voice Input, SFTP and Secure Key Storage
 publish_to: 'none'
 version: 1.0.0+71
 
@@ -48,6 +48,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  sqflite_common_ffi: ^2.4.5
 
 flutter:
   uses-material-design: true
