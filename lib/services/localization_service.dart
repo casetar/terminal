@@ -40,7 +40,7 @@ class LocalizationService {
 
   static const _translations = {
     'ru': {
-      'app_title': 'Terminal',
+      'app_title': 'Терминал',
       'keys_title': 'SSH Ключи',
       'add_host': 'Добавить хост',
       'edit_host': 'Редактировать',
