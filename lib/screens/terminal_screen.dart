@@ -305,7 +305,6 @@ class _TerminalScreenState extends State<TerminalScreen> {
   void _sendArrow(String sequence) {
     _sendInput(sequence);
     setState(() => _showArrows = false);
-    _sendInput('\x1b');
   }
 
   Future<void> _copySelection() async {
@@ -612,40 +611,43 @@ class _TerminalScreenState extends State<TerminalScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_showArrows) const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Escape
-                      _ArrowBtn(
-                        icon: Icons.close,
-                        onTap: () {
-                          _sendInput('\x1b');
-                          setState(() => _showArrows = false);
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      _ArrowBtn(
-                        icon: Icons.arrow_upward,
-                        onTap: () => _sendArrow('\x1b[A'),
-                      ),
-                      const SizedBox(width: 8),
-                      _ArrowBtn(
-                        icon: Icons.arrow_downward,
-                        onTap: () => _sendArrow('\x1b[B'),
-                      ),
-                      const SizedBox(width: 8),
-                      _ArrowBtn(
-                        icon: Icons.arrow_left,
-                        onTap: () => _sendArrow('\x1b[D'),
-                      ),
-                      const SizedBox(width: 8),
-                      _ArrowBtn(
-                        icon: Icons.arrow_right,
-                        onTap: () => _sendArrow('\x1b[C'),
-                      ),
-                    ],
-                  ),
+                  if (_showArrows) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Escape
+                        _ArrowBtn(
+                          icon: null,
+                          label: 'Esc',
+                          onTap: () {
+                            _sendInput('\x1b');
+                            setState(() => _showArrows = false);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _ArrowBtn(
+                          icon: Icons.arrow_upward,
+                          onTap: () => _sendArrow('\x1b[A'),
+                        ),
+                        const SizedBox(width: 8),
+                        _ArrowBtn(
+                          icon: Icons.arrow_downward,
+                          onTap: () => _sendArrow('\x1b[B'),
+                        ),
+                        const SizedBox(width: 8),
+                        _ArrowBtn(
+                          icon: Icons.arrow_left,
+                          onTap: () => _sendArrow('\x1b[D'),
+                        ),
+                        const SizedBox(width: 8),
+                        _ArrowBtn(
+                          icon: Icons.arrow_right,
+                          onTap: () => _sendArrow('\x1b[C'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                  ],
                   // Copy
                   _IconBtn(
                     icon: Icons.copy_outlined,
@@ -789,25 +791,37 @@ class _IconBtn extends StatelessWidget {
 }
 
 class _ArrowBtn extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final String? label;
   final VoidCallback onTap;
-  const _ArrowBtn({required this.icon, required this.onTap});
+  const _ArrowBtn({this.icon, this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: '',
+      message: label ?? '',
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 36,
+          width: 40,
           height: 36,
           decoration: BoxDecoration(
             color: AppTheme.accent.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
           ),
-          child: Icon(icon, color: AppTheme.accent, size: 20),
+          child: Center(
+            child: icon != null
+                ? Icon(icon, color: AppTheme.accent, size: 20)
+                : Text(
+                    label ?? '',
+                    style: TextStyle(
+                      color: AppTheme.accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
         ),
       ),
     );
