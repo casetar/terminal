@@ -648,7 +648,9 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     ),
                     const SizedBox(height: 6),
                   ],
-                  // Copy
+                  Row(
+                    children: [
+                      // Copy
                   _IconBtn(
                     icon: Icons.copy_outlined,
                     color: AppTheme.textSecondary,
@@ -748,11 +750,13 @@ class _TerminalScreenState extends State<TerminalScreen> {
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
-    );
+    ],
+  ),
+);
   }
 }
 
