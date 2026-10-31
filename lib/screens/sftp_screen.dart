@@ -124,7 +124,9 @@ class _SftpScreenState extends State<SftpScreen> {
           final filename = file.name;
 
           String remotePath;
-          if (_currentPath == '.' || _currentPath.endsWith('/')) {
+          if (_currentPath == '.') {
+            remotePath = filename;
+          } else if (_currentPath.endsWith('/')) {
             remotePath = '$_currentPath$filename';
           } else {
             remotePath = '$_currentPath/$filename';
@@ -166,7 +168,9 @@ class _SftpScreenState extends State<SftpScreen> {
         setState(() => _loading = true);
         
         String remotePath;
-        if (_currentPath == '.' || _currentPath.endsWith('/')) {
+        if (_currentPath == '.') {
+          remotePath = item.filename;
+        } else if (_currentPath.endsWith('/')) {
           remotePath = '$_currentPath${item.filename}';
         } else {
           remotePath = '$_currentPath/${item.filename}';
@@ -207,7 +211,9 @@ class _SftpScreenState extends State<SftpScreen> {
       setState(() => _loading = true);
       final folderName = item.filename;
       String remotePath;
-      if (_currentPath == '.' || _currentPath.endsWith('/')) {
+      if (_currentPath == '.') {
+        remotePath = folderName;
+      } else if (_currentPath.endsWith('/')) {
         remotePath = '$_currentPath$folderName';
       } else {
         remotePath = '$_currentPath/$folderName';
