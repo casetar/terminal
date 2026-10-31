@@ -162,39 +162,43 @@ class _SftpScreenState extends State<SftpScreen> {
   }
 
   Future<void> _downloadFile(SftpName item) async {
+    setState(() => _loading = true);
     try {
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-      if (selectedDirectory != null) {
-        setState(() => _loading = true);
-        
-        String remotePath;
-        if (_currentPath == '.') {
-          remotePath = item.filename;
-        } else if (_currentPath.endsWith('/')) {
-          remotePath = '$_currentPath${item.filename}';
-        } else {
-          remotePath = '$_currentPath/${item.filename}';
-        }
-        
-        final remoteFile = await _sftp!.open(remotePath, mode: SftpFileOpenMode.read);
-        File localFile = File(p.join(selectedDirectory, item.filename));
-        
-        final sink = localFile.openWrite();
-        await for (var chunk in remoteFile.read()) {
-          sink.add(chunk);
-        }
-        await sink.close();
-        
-        if (mounted) {
-          setState(() => _loading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Downloaded ${item.filename}'),
-              backgroundColor: AppTheme.accentGreen,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+      String remotePath;
+      if (_currentPath == '.') {
+        remotePath = item.filename;
+      } else if (_currentPath.endsWith('/')) {
+        remotePath = '$_currentPath${item.filename}';
+      } else {
+        remotePath = '$_currentPath/${item.filename}';
+      }
+
+      final remoteFile = await _sftp!.open(remotePath, mode: SftpFileOpenMode.read);
+
+      // Save to Downloads folder
+      final downloadsDir = await getDownloadsDirectory();
+      final saveDir = downloadsDir?.path;
+      if (saveDir == null) {
+        throw Exception('Downloads directory not available');
+      }
+
+      final localFile = File('$saveDir/${item.filename}');
+      final sink = localFile.openWrite();
+      await for (var chunk in remoteFile.read()) {
+        sink.add(chunk);
+      }
+      await sink.close();
+      await remoteFile.close();
+
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Downloaded to Downloads/${item.filename}'),
+            backgroundColor: AppTheme.accentGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -274,6 +278,12 @@ class _SftpScreenState extends State<SftpScreen> {
         });
       }
     }
+  }
+
+  bool _isTextFile(String filename) {
+    final ext = p.extension(filename).toLowerCase();
+    final textExtensions = ['.txt', '.sh', '.json', '.yaml', '.yml', '.md', '.csv', '.log', '.conf', '.cfg', '.ini', '.py', '.js', '.html', '.css', '.xml', '.dart', '.swift', '.kt', '.java', '.c', '.cpp', '.h', '.hpp', '.rb', '.go', '.rs'];
+    return textExtensions.contains(ext);
   }
 
   void _onItemTap(SftpName item) {
@@ -467,12 +477,29 @@ class _SftpScreenState extends State<SftpScreen> {
                                 tooltip: 'Zip & Download',
                                 onPressed: () => _zipAndDownloadFolder(item),
                               )
-                            : IconButton(
-                                icon: const Icon(
-                                  Icons.download,
-                                  color: AppTheme.accent,
-                                ),
-                                onPressed: () => _downloadFile(item),
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Edit button for text files
+                                  if (_isTextFile(item.filename))
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit,
+                                        color: AppTheme.accent,
+                                      ),
+                                      tooltip: 'Edit',
+                                      onPressed: () => _openTextFile(item),
+                                    ),
+                                  if (_isTextFile(item.filename))
+                                    const SizedBox(width: 4),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.download,
+                                      color: AppTheme.accent,
+                                    ),
+                                    onPressed: () => _downloadFile(item),
+                                  ),
+                                ],
                               ),
                         onTap: () => _onItemTap(item),
                       );

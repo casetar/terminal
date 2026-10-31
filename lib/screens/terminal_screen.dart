@@ -556,8 +556,9 @@ class _TerminalScreenState extends State<TerminalScreen> {
       resizeToAvoidBottomInset: false,
       body: Column(
         children: [
-          // Terminal scroll area — separate from input
-          Expanded(
+          // Terminal scroll area — top 70% of screen, separate from input
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
             child: MediaQuery(
               data: MediaQuery.of(context).copyWith(
                 viewInsets: EdgeInsets.zero,
@@ -611,35 +612,40 @@ class _TerminalScreenState extends State<TerminalScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Arrow keys overlay (shown after Escape)
-                  if (_showArrows)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _ArrowBtn(
-                          icon: Icons.arrow_upward,
-                          onTap: () => _sendArrow('\x1b[A'),
-                        ),
-                        const SizedBox(width: 8),
-                        _ArrowBtn(
-                          icon: Icons.arrow_downward,
-                          onTap: () => _sendArrow('\x1b[B'),
-                        ),
-                        const SizedBox(width: 8),
-                        _ArrowBtn(
-                          icon: Icons.arrow_left,
-                          onTap: () => _sendArrow('\x1b[D'),
-                        ),
-                        const SizedBox(width: 8),
-                        _ArrowBtn(
-                          icon: Icons.arrow_right,
-                          onTap: () => _sendArrow('\x1b[C'),
-                        ),
-                      ],
-                    ),
                   if (_showArrows) const SizedBox(height: 6),
                   Row(
-                children: [
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Escape
+                      _ArrowBtn(
+                        icon: Icons.close,
+                        onTap: () {
+                          _sendInput('\x1b');
+                          setState(() => _showArrows = false);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      _ArrowBtn(
+                        icon: Icons.arrow_upward,
+                        onTap: () => _sendArrow('\x1b[A'),
+                      ),
+                      const SizedBox(width: 8),
+                      _ArrowBtn(
+                        icon: Icons.arrow_downward,
+                        onTap: () => _sendArrow('\x1b[B'),
+                      ),
+                      const SizedBox(width: 8),
+                      _ArrowBtn(
+                        icon: Icons.arrow_left,
+                        onTap: () => _sendArrow('\x1b[D'),
+                      ),
+                      const SizedBox(width: 8),
+                      _ArrowBtn(
+                        icon: Icons.arrow_right,
+                        onTap: () => _sendArrow('\x1b[C'),
+                      ),
+                    ],
+                  ),
                   // Copy
                   _IconBtn(
                     icon: Icons.copy_outlined,
@@ -740,13 +746,11 @@ class _TerminalScreenState extends State<TerminalScreen> {
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
-    ],
-  ),
-);
+    );
   }
 }
 
