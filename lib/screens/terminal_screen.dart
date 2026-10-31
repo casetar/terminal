@@ -42,7 +42,10 @@ class _TerminalScreenState extends State<TerminalScreen> {
   String _voiceBuffer = '';
 
   // Arrow keys overlay (shown after Escape)
+  // Arrow keys overlay (shown after Escape)
   bool _showArrows = false;
+  // Scroll controller for terminal view
+  final ScrollController _terminalScrollController = ScrollController();
 
   @override
   void initState() {
@@ -422,6 +425,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
       _client?.close();
     }
     _speech.cancel();
+    _terminalScrollController.dispose();
     _inputController.dispose();
     _inputFocus.dispose();
     super.dispose();
@@ -557,13 +561,18 @@ class _TerminalScreenState extends State<TerminalScreen> {
         children: [
           // Terminal scroll area — fills remaining space above input bar
           Expanded(
-            child: MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                viewInsets: EdgeInsets.zero,
-                padding: EdgeInsets.zero,
-              ),
-              child: TerminalView(
-                terminal,
+            child: Scrollbar(
+              controller: _terminalScrollController,
+              thumbVisibility: true,
+              child: MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  viewInsets: EdgeInsets.zero,
+                  padding: EdgeInsets.zero,
+                ),
+                child: TerminalView(
+                  terminal,
+                  scrollController: _terminalScrollController,
+                  autofocus: true,
               readOnly: false,
               controller: terminalController,
               theme: TerminalTheme(
@@ -597,6 +606,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
               onTapUp: _handleTerminalTap,
             ),
             ),
+          ),
           ),
 
 
