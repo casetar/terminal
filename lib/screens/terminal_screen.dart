@@ -300,14 +300,10 @@ class _TerminalScreenState extends State<TerminalScreen> {
 
   void _toggleArrows() {
     setState(() => _showArrows = !_showArrows);
-    if (!_showArrows) {
-      _sendInput('\x1b'); // Escape key when hiding arrows
-    }
   }
 
   void _sendArrow(String sequence) {
     _sendInput(sequence);
-    setState(() => _showArrows = false);
   }
 
   Future<void> _copySelection() async {
@@ -620,6 +616,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Дополнительные стрелки и Esc (открываются поверх кнопок по кнопке клавиатуры)
                   if (_showArrows) ...[
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -630,7 +627,6 @@ class _TerminalScreenState extends State<TerminalScreen> {
                           label: 'Esc',
                           onTap: () {
                             _sendInput('\x1b');
-                            setState(() => _showArrows = false);
                           },
                         ),
                         const SizedBox(width: 8),
@@ -655,114 +651,120 @@ class _TerminalScreenState extends State<TerminalScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                   ],
+                  // Широкое поле ввода команды над кнопками
                   Row(
                     children: [
-                      // Copy
-                  _IconBtn(
-                    icon: Icons.copy_outlined,
-                    color: AppTheme.textSecondary,
-                    tooltip: LocalizationService.translate('copy'),
-                    onTap: _copySelection,
-                  ),
-                  const SizedBox(width: 6),
-                  // Paste
-                  _IconBtn(
-                    icon: Icons.paste_outlined,
-                    color: AppTheme.textSecondary,
-                    tooltip: LocalizationService.translate('paste'),
-                    onTap: _pasteFromClipboard,
-                  ),
-                  const SizedBox(width: 6),
-                  // Ctrl+C
-                  _IconBtn(
-                    icon: Icons.cancel_outlined,
-                    color: AppTheme.danger,
-                    tooltip: 'Ctrl+C',
-                    onTap: () => _sendInput('\x03'),
-                  ),
-                  const SizedBox(width: 6),
-                  // Tab
-                  _IconBtn(
-                    icon: Icons.keyboard_tab,
-                    color: AppTheme.textSecondary,
-                    tooltip: 'Tab',
-                    onTap: () => _sendInput('\t'),
-                  ),
-                  const SizedBox(width: 8),
-                  // Escape / Arrows toggle
-                  _IconBtn(
-                    icon: _showArrows ? Icons.close : Icons.keyboard,
-                    color: AppTheme.textSecondary,
-                    tooltip: _showArrows ? 'Hide arrows' : 'Escape',
-                    onTap: _toggleArrows,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: TextField(
-                      controller: _inputController,
-                      focusNode: _inputFocus,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 14,
-                        fontFamily: 'JetBrains Mono',
-                      ),
-                      decoration: InputDecoration(
-                        hintText: _isListening
-                            ? LocalizationService.translate('speak_hint')
-                            : LocalizationService.translate('command_hint'),
-                        hintStyle: TextStyle(
-                          color: _isListening
-                              ? AppTheme.accent
-                              : AppTheme.textSecondary,
-                          fontSize: 13,
+                      Expanded(
+                        child: TextField(
+                          controller: _inputController,
+                          focusNode: _inputFocus,
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                            fontFamily: 'JetBrains Mono',
+                          ),
+                          decoration: InputDecoration(
+                            hintText: _isListening
+                                ? LocalizationService.translate('speak_hint')
+                                : LocalizationService.translate('command_hint'),
+                            hintStyle: TextStyle(
+                              color: _isListening
+                                  ? AppTheme.accent
+                                  : AppTheme.textSecondary,
+                              fontSize: 13,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            isDense: true,
+                          ),
+                          onSubmitted: (v) {
+                            _sendInput('$v\n');
+                            _inputController.clear();
+                          },
+                          textInputAction: TextInputAction.send,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                        isDense: true,
                       ),
-                      onSubmitted: (v) {
-                        _sendInput('$v\n');
-                        _inputController.clear();
-                      },
-                      textInputAction: TextInputAction.send,
-                    ),
+                      const SizedBox(width: 6),
+                      // Voice button
+                      _IconBtn(
+                        icon: _isListening ? Icons.mic : Icons.mic_none,
+                        color: _isListening
+                            ? AppTheme.accent
+                            : (_speechAvailable
+                                ? AppTheme.textSecondary
+                                : AppTheme.textSecondary.withValues(alpha: 0.4)),
+                        tooltip: 'Voice',
+                        onTap: _toggleVoice,
+                      ),
+                      const SizedBox(width: 6),
+                      // Send button
+                      _IconBtn(
+                        icon: Icons.send,
+                        color: AppTheme.accent,
+                        tooltip: LocalizationService.translate('send'),
+                        onTap: () {
+                          final text = _inputController.text;
+                          if (text.isNotEmpty) {
+                            _sendInput('$text\r');
+                          } else {
+                            _sendInput('\r');
+                          }
+                          _inputController.clear();
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  // Voice button — always visible; system dialog fires on first tap
-                  _IconBtn(
-                    icon: _isListening ? Icons.mic : Icons.mic_none,
-                    color: _isListening
-                        ? AppTheme.accent
-                        : (_speechAvailable
-                            ? AppTheme.textSecondary
-                            : AppTheme.textSecondary.withValues(alpha: 0.4)),
-                    tooltip: 'Voice',
-                    onTap: _toggleVoice,
-                  ),
-                  const SizedBox(width: 6),
-                  // Send button
-                  _IconBtn(
-                    icon: Icons.send,
-                    color: AppTheme.accent,
-                    tooltip: LocalizationService.translate('send'),
-                    onTap: () {
-                      final text = _inputController.text;
-                      if (text.isNotEmpty) {
-                        _sendInput('$text\r');
-                      } else {
-                        _sendInput('\r');
-                      }
-                      _inputController.clear();
-                    },
+                  const SizedBox(height: 8),
+                  // Панель вспомогательных кнопок внизу
+                  Row(
+                    children: [
+                      // Escape / Arrows toggle (кнопка в виде клавиатуры)
+                      _IconBtn(
+                        icon: _showArrows ? Icons.close : Icons.keyboard,
+                        color: _showArrows ? AppTheme.accent : AppTheme.textSecondary,
+                        tooltip: _showArrows ? 'Hide arrows' : 'Keyboard arrows',
+                        onTap: _toggleArrows,
+                      ),
+                      const SizedBox(width: 8),
+                      // Tab
+                      _IconBtn(
+                        icon: Icons.keyboard_tab,
+                        color: AppTheme.textSecondary,
+                        tooltip: 'Tab',
+                        onTap: () => _sendInput('\t'),
+                      ),
+                      const SizedBox(width: 8),
+                      // Ctrl+C
+                      _IconBtn(
+                        icon: Icons.cancel_outlined,
+                        color: AppTheme.danger,
+                        tooltip: 'Ctrl+C',
+                        onTap: () => _sendInput('\x03'),
+                      ),
+                      const Spacer(),
+                      // Copy
+                      _IconBtn(
+                        icon: Icons.copy_outlined,
+                        color: AppTheme.textSecondary,
+                        tooltip: LocalizationService.translate('copy'),
+                        onTap: _copySelection,
+                      ),
+                      const SizedBox(width: 8),
+                      // Paste
+                      _IconBtn(
+                        icon: Icons.paste_outlined,
+                        color: AppTheme.textSecondary,
+                        tooltip: LocalizationService.translate('paste'),
+                        onTap: _pasteFromClipboard,
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
     ],
   ),
 );
