@@ -6,7 +6,7 @@ cp -f "$apk" /var/www/html/downloads/savun.apk
 download_link="https://0i2.ru/downloads/savun.apk"
 build_date=$(date "+%d.%m.%Y %H:%M")
 ts=$(date +%s%3N)
-LUCY_PEER_ID="fa7206de-6a28-435d-847a-8bb5edd17af6"
+LUCY_PEER_ID="6c065f0f-0b13-576c-9904-659498876464"
 LUCY_SEND_URL="http://127.0.0.1:8080/signal/send_peer"
 
 msg_text="🚀 Новая сборка Savun готова! Дата: ${build_date} · ${size}"

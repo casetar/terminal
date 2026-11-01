@@ -15,10 +15,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
         applicationId = "ru.savun.firewall_terminal"
         minSdk = flutter.minSdkVersion
@@ -38,6 +34,12 @@ android {
     lint {
         checkReleaseBuilds = false
         abortOnError = false
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
