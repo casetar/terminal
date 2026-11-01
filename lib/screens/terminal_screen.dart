@@ -556,7 +556,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
           ],
         ),
       ),
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: Column(
         children: [
           // Terminal scroll area — fills remaining space above input bar
