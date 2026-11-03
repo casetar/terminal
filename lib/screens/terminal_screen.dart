@@ -323,9 +323,6 @@ class _TerminalScreenState extends State<TerminalScreen> {
   }
 
   void _handleTerminalTap(TapUpDetails details, CellOffset cellOffset) {
-    if (_inputFocus.hasFocus) {
-      _inputFocus.unfocus();
-    }
     if (terminalController.selection != null) return;
     
     int lineIndex = terminal.buffer.scrollBack + cellOffset.y;
@@ -571,8 +568,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
                 child: TerminalView(
                   terminal,
                   scrollController: _terminalScrollController,
-                  autofocus: false,
-                  hardwareKeyboardOnly: true,
+                  autofocus: true,
                   readOnly: false,
                   controller: terminalController,
                   theme: TerminalTheme(
