@@ -323,6 +323,9 @@ class _TerminalScreenState extends State<TerminalScreen> {
   }
 
   void _handleTerminalTap(TapUpDetails details, CellOffset cellOffset) {
+    if (_inputFocus.hasFocus) {
+      _inputFocus.unfocus();
+    }
     if (terminalController.selection != null) return;
     
     int lineIndex = terminal.buffer.scrollBack + cellOffset.y;
@@ -568,41 +571,42 @@ class _TerminalScreenState extends State<TerminalScreen> {
                 child: TerminalView(
                   terminal,
                   scrollController: _terminalScrollController,
-                  autofocus: true,
-              readOnly: false,
-              controller: terminalController,
-              theme: TerminalTheme(
-                cursor: AppTheme.accent,
-                selection: AppTheme.accent.withValues(alpha: 0.3),
-                foreground: AppTheme.textPrimary,
-                background: const Color(0xFF080B10),
-                black: Colors.black,
-                white: AppTheme.textPrimary,
-                red: AppTheme.danger,
-                green: AppTheme.accentGreen,
-                yellow: const Color(0xFFFFD60A),
-                blue: AppTheme.accent,
-                magenta: AppTheme.accentPurple,
-                cyan: AppTheme.accent,
-                brightBlack: AppTheme.textSecondary,
-                brightWhite: Colors.white,
-                brightRed: AppTheme.danger,
-                brightGreen: AppTheme.accentGreen,
-                brightYellow: const Color(0xFFFFD60A),
-                brightBlue: AppTheme.accent,
-                brightMagenta: AppTheme.accentPurple,
-                brightCyan: AppTheme.accent,
-                searchHitBackground: AppTheme.accent.withValues(alpha: 0.4),
-                searchHitBackgroundCurrent:
-                    AppTheme.accent.withValues(alpha: 0.7),
-                searchHitForeground: const Color(0xFF080B10),
+                  autofocus: false,
+                  hardwareKeyboardOnly: true,
+                  readOnly: false,
+                  controller: terminalController,
+                  theme: TerminalTheme(
+                    cursor: AppTheme.accent,
+                    selection: AppTheme.accent.withValues(alpha: 0.3),
+                    foreground: AppTheme.textPrimary,
+                    background: const Color(0xFF080B10),
+                    black: Colors.black,
+                    white: AppTheme.textPrimary,
+                    red: AppTheme.danger,
+                    green: AppTheme.accentGreen,
+                    yellow: const Color(0xFFFFD60A),
+                    blue: AppTheme.accent,
+                    magenta: AppTheme.accentPurple,
+                    cyan: AppTheme.accent,
+                    brightBlack: AppTheme.textSecondary,
+                    brightWhite: Colors.white,
+                    brightRed: AppTheme.danger,
+                    brightGreen: AppTheme.accentGreen,
+                    brightYellow: const Color(0xFFFFD60A),
+                    brightBlue: AppTheme.accent,
+                    brightMagenta: AppTheme.accentPurple,
+                    brightCyan: AppTheme.accent,
+                    searchHitBackground: AppTheme.accent.withValues(alpha: 0.4),
+                    searchHitBackgroundCurrent:
+                        AppTheme.accent.withValues(alpha: 0.7),
+                    searchHitForeground: const Color(0xFF080B10),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  textStyle: const TerminalStyle(fontSize: 13),
+                  onTapUp: _handleTerminalTap,
+                ),
               ),
-              padding: const EdgeInsets.all(8),
-              textStyle: const TerminalStyle(fontSize: 13),
-              onTapUp: _handleTerminalTap,
             ),
-            ),
-          ),
           ),
 
 
