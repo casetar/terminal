@@ -568,7 +568,8 @@ class _TerminalScreenState extends State<TerminalScreen> {
                 child: TerminalView(
                   terminal,
                   scrollController: _terminalScrollController,
-                  autofocus: true,
+                  autofocus: false,
+                  hardwareKeyboardOnly: true,
                   readOnly: false,
                   controller: terminalController,
                   theme: TerminalTheme(
